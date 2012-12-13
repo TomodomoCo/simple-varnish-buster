@@ -305,11 +305,11 @@ if ( $vpm_svb_instance->prerequisites_met ) {
 	add_action( 'delete_post', array( $vpm_svb_instance, 'cache_bust_post' ), 99);
 	add_action( 'transition_post_status', array( $vpm_svb_instance, 'cache_bust_post_transitional' ), 99 );
 
-	add_action( 'comment_post', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
-	add_action( 'edit_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
-	add_action( 'trashed_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
-	add_action( 'untrashed_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
-	add_action( 'deleted_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+	add_action( 'comment_post', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
+	add_action( 'edit_comment', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
+	add_action( 'trashed_comment', array( $vpm_svb_instance, 'cache_bust_comments' ) , 99 );
+	add_action( 'untrashed_comment', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
+	add_action( 'deleted_comment', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
 
 	add_action( 'admin_menu', array( $vpm_svb_instance, 'add_settings_page' ) );
 	
