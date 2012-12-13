@@ -76,18 +76,21 @@ class Simple_Varnish_Buster {
 			return false;
 		}
 	
-		// set up varnish host
-		$this->varnish_host = parse_url( get_option( 'svb_varnish_host' ), PHP_URL_HOST );
-		$port = parse_url ( get_option( 'svb_varnish_host' ), PHP_URL_PORT );
+                // set up varnish host
+                $this->varnish_host = parse_url( get_option( 'svb_varnish_host' ), PHP_URL_HOST );          
+                $port = parse_url ( get_option( 'svb_varnish_host' ), PHP_URL_PORT );
 
-		if ( $port ) {
-			$this->varnish_host .= ':' . intval( $port );
-		}
-	
-		$this->timeout = intval( get_option( 'svb_timeout' ) );
+                if ( $port ) { 
+                        $this->varnish_host .= ':' . intval( $port );
+                }   
+                    
+                $this->timeout = intval( get_option( 'svb_timeout' ) );
+                    
+                if ( ! $this->varnish_host || ! $this->timeout ) { 
+                        $this->initial_setup();
+                }   
 
-		$this->prerequisites_met = true;		
-	
+                $this->prerequisites_met = true;  	
 	}
 
 	/**
@@ -98,17 +101,17 @@ class Simple_Varnish_Buster {
 	public function initial_setup() {
 		// set some sensible defaults
 
-		$default_varnish_host = '127.0.0.1';
+		$default_varnish_host = 'http://127.0.0.1';
 		$default_timeout = '1';
 
-		if ( ! get_option( 'svb_varnish_host' ) ) {
+		if ( ! get_option( 'svb_varnish_host' ) || ! parse_url( get_option( 'svb_varnish_host' ), PHP_URL_HOST) ) {
 			add_option( 'svb_varnish_host', $default_varnish_host, '', 'yes' );
-			$this->varnish_host = $default_varnish_host;
+			$this->varnish_host = parse_url( $default_varnish_host, PHP_URL_HOST );
 		}
 
 		if ( ! get_option( 'svb_timeout' ) ) {
 			add_option( 'svb_timeout', $default_timeout, '', 'yes' );
-			$this->timeout = $default_timeout;
+			$this->timeout = intval( $default_timeout );
 		}
 		
 	}
@@ -125,7 +128,13 @@ class Simple_Varnish_Buster {
 		$this->bust_cache_for_url( $post_url );
 		
 		// also expire homepage
-		$this->bust_cache_for_url( get_home_url( null, '', 'http' )  );
+		$home = get_home_url( null, '', 'http' );
+		// if there is no path, add a trailing slash so there is one!
+		if ( ! parse_url( $home, PHP_URL_PATH ) ) {
+			$home .= '/';
+		}
+
+		$this->bust_cache_for_url( $home );
 
 		// also expire feeds
 		$feed_urls[] = get_bloginfo( 'rss2_url' );
@@ -165,7 +174,7 @@ class Simple_Varnish_Buster {
 			// add the query string in with its preceding '?' character, or set it to a blank string
 			$url_parts['query'] = array_key_exists( 'query', $url_parts ) ? '?' . $url_parts['query'] : '';	
 
-			$reconstructed_url = $url_parts['scheme'] . $this->varnish_host . $url_parts['path'] . $url_parts['query'];
+			$reconstructed_url = $url_parts['scheme'] . '://' $this->varnish_host . $url_parts['path'] . $url_parts['query'];
 		}
 		else {
 			return false;
