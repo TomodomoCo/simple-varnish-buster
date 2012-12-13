@@ -174,7 +174,7 @@ class Simple_Varnish_Buster {
 		$options = array(
 			CURLOPT_URL		=>	$reconstructed_url,
 			CURLOPT_USERAGENT	=>	$this->user_agent_string,
-			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . $url_parts['host'] )
+			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . $url_parts['host'] ),
 			CURLOPT_CUSTOMREQUEST	=>	'PURGE',
 			CURLOPT_RETURNTRANSFER	=>	true,
 			CURLOPT_TIMEOUT		=>	$this->timeout,
