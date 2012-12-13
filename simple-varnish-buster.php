@@ -51,6 +51,13 @@ class Simple_Varnish_Buster {
 	private $user_agent_string = "Simple Varnish Buster/1.0";
 
 	/**
+	 * The IP address or hostname where the Varnish server is running
+	 * @access private
+	 * @var string
+	 */
+	private $varnish_host;
+
+	/**
 	 * Constructor, which checks for prerequisites
 	 */
 	public function __construct() {
@@ -61,6 +68,8 @@ class Simple_Varnish_Buster {
 
 			return false;
 		}
+	
+		// set up varnish host
 
 		$this->prerequisites_met = true;		
 	
@@ -75,18 +84,26 @@ class Simple_Varnish_Buster {
 	protected function bust_cache_for_url( $url ) {
 
 		$options = array(
-			CURLOPT_URL		=>	$this->varnish_address,
+			CURLOPT_URL		=>	$url,
 			CURLOPT_USERAGENT	=>	$this->user_agent_string,
-			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . esc_attr( strtolower( $_SERVER['SERVER_NAME'] ) ) )
+			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . $this->varnish_host )
+			CURLOPT_CUSTOMREQUEST	=>	'PURGE',
+			CURLOPT_RETURNTRANSFER	=>	true,
+			CURLOPT_TIMEOUT		=>	$this->timeout,
 		);
 
 		$request = curl_init();
-
-		
+		curl_setopt_array($request, $options);
+		curl_exec($request);
 	
 	}
 
 
 };
 
+$vpm_svb_instance = new Simple_Varnish_Buster();
 
+if ( $vpm_svb_instance->prerequisites_met ) {
+	// hook up actions
+
+}
