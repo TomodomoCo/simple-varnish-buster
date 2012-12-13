@@ -250,13 +250,66 @@ class Simple_Varnish_Buster {
 			die();	
 		}
 
+		$message = '';
+
+		if (
+			'post' == strtolower( $_SERVER['REQUEST_METHOD'] ) &&
+			array_key_exists( 'varnish_host', $_POST) &&
+			array_key_exists( 'timeout', $_POST) &&
+			array_key_exists( '_wpnonce', $_POST) &&
+			wp_verify_nonce( $_POST['_wpnonce'], 'simple-varnish-buster-settings' )
+		) {
+			// process form
+			$success = true;
+
+			$new_host = parse_url( $_POST['varnish_host'] );
+			if ( ! $new_host ) {
+				$message .= __( 'The Varnish host you entered was not in a valid format.', 'simple-varnish-buster' );
+				$success = false;
+			}
+			else if ( ! array_key_exists( 'scheme', $new_host ) ) {
+				$_POST['varnish_host'] = 'http://' . $_POST['varnish_host'];
+				$new_host = parse_url( $_POST['varnish_host'] );
+			}
+
+			if ( ! $new_host || ! array_key_exists( 'host', $new_host ) ) {
+				$message .= __( 'The Varnish host you entered was not in a valid format, as it does not have a valid host portion.', 'simple-varnish-buster' );
+				$success = false;
+			}
+
+			if ( intval( $_POST['timeout'] ) != $_POST['timeout'] ) {
+				$message .= __( 'The timeout you entered was not a valid integer.', 'simple-varnish-buster' );
+				$success = false;
+			}
+
+			else if ( intval( $_POST['timeout'] ) < 1 ) {
+				$message .= __('The timeout you entered was not at least 1 second.', 'simple-varnish-buster' );
+				$success = false;
+			}
+
+			if ( $success ) {
+				update_option( 'svb_varnish_host', $_POST['varnish_host'] );
+				update_option( 'svb_timeout', intval( $_POST['timeout'] ) );
+				$message = __('Settings saved', 'simple-varnish-buster');
+			}
+			
+		}
+
 		?>
 		<div class="wrap">
 			<div id="icon-options-general" class="icon32"></div><h2><?php _e( 'Simple Varnish Buster', 'simple-varnish-buster' ); ?></h2>
 
 			<form method="post" action="options-general.php?page=simple-varnish-buster">
 				<?php wp_nonce_field( 'simple-varnish-buster-settings' ); ?>
-				
+
+				<h3><?php _e( 'Varnish Settings', 'simple-varnish-buster-settings' ); ?></h3>
+
+				<?php if ( ! empty( $message ) ): ?>
+				<div class="updated settings-error">
+					<p><strong><?php echo esc_html( $message ); ?></strong></p>
+				</div>
+				<?php endif; ?>
+	
 				<table class="form-table edit-controls-form-table">
 					<tbody>
 						<tr class="form-field">
