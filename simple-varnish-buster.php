@@ -149,6 +149,32 @@ class Simple_Varnish_Buster {
 	}
 
 	/**
+	 * Bust the cache for this post as it transitions between post statuses
+	 * @access public
+	 * @return void
+	 */
+	public function cache_bust_post_transitional( $old, $new, $post ) {
+		$post_id = $post->ID;
+		$this->cache_bust_post( $post_id );
+	}
+
+	/**
+	 * Bust the cache for a post when comments on it have been altered.
+	 * @access public
+	 * @return void
+	 */
+	public function cache_bust_comments( $comment_id ) {
+		$comment = get_comment( $comment_id );
+
+		// only bust cache if this is not spam
+		if ( '1' == $comment->comment_approved || 'trash' == $comment->comment_approved ) {
+			$post_id = $comment->comment_post_ID;
+			$this->cache_bust_post( $post_id );	
+		}
+	
+	}
+
+	/**
 	 * Send a PURGE request to the Varnish cache server for the specified $url.
 	 * @access protected
 	 * @param string $url
@@ -195,6 +221,78 @@ class Simple_Varnish_Buster {
 	
 	}
 
+	/**
+	 * Register a settings page for the plugin, so that the options can be configured.
+	 * @access public
+	 * @return void
+	 */
+	public function add_settings_page() {
+		add_options_page(
+			__( 'Simple Varnish Buster', 'simple-varnish-buster' ),		/* page title */
+			__( 'Simple Varnish Buster', 'simple-varnish-buster' ),		/* menu title */
+			'manage_options',						/* capability */
+			'simple-varnish-buster',					/* menu slug */
+			array( $this, 'print_settings_page')				/* callback */	
+		);
+	}
+
+	/**
+	 * Handle and print to output the plugin's settings page.
+	 * @access public
+	 * @return void
+	 */
+	public function print_settings_page() {
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			echo '<h1>';
+			_e( 'You do not have permission to manage Varnish settings.', 'simple-varnish-buster' );
+			echo '</h1>';
+			die();	
+		}
+
+		?>
+		<div class="wrap">
+			<div id="icon-options-general" class="icon32"></div><h2><?php _e( 'Simple Varnish Buster', 'simple-varnish-buster' ); ?></h2>
+
+			<form method="post" action="options-general.php?page=simple-varnish-buster">
+				<?php wp_nonce_field( 'simple-varnish-buster-settings' ); ?>
+				
+				<table class="form-table edit-controls-form-table">
+					<tbody>
+						<tr class="form-field">
+							<th scope="row">
+								<label for="varnish_host"><?php _e( 'Varnish Host', 'simple-varnish-buster' ); ?></label>
+							</th>
+							<td><fieldset>
+								<input type="text" name="varnish_host" id="varnish_host" value="<?php echo esc_attr( get_option( 'svb_varnish_host' ) ); ?>" />
+								<br />
+								<span class="description"><?php _e( 'Address of Varnish server (including port, if required)', 'simple-varnish-buster' ); ?></span>
+							</fieldset></td>
+						</tr>
+						<tr class="form-field">
+							<th scope="row">
+								<label for="timeout"><?php _e( 'Maximum Timeout', 'simple-varnish-buster' ); ?></label>
+							</th>
+							<td><fieldset>
+								<input type="text" name="timeout" id="timeout" value="<?php echo esc_attr( get_option( 'svb_timeout' ) ); ?>" />
+								<br />
+								<span class="description"><?php _e( 'Maximum time to wait for Varnish to clear the cache for any given page. Must be an integer, greater than zero.', 'simple-varnish-buster' ); ?></span>
+							</fieldset></td>
+						</tr>
+	
+					</tbody>
+				</table>
+
+				<p class="submit">
+					<input type="submit" class="button-primary" value="<?php _e( 'Save Changes' ); ?>" id="submit" />
+				</p>
+
+			</form>	
+		</div>
+		<?php		
+	
+	}
+
 
 };
 
@@ -203,7 +301,17 @@ $vpm_svb_instance = new Simple_Varnish_Buster();
 if ( $vpm_svb_instance->prerequisites_met ) {
 	// hook up actions
 
-	add_action( 'edit_post', array( $vpm_svb_instance, 'cache_bust_post'), 99 );
+	add_action( 'edit_post', array( $vpm_svb_instance, 'cache_bust_post' ), 99 );
+	add_action( 'delete_post', array( $vpm_svb_instance, 'cache_bust_post' ), 99);
+	add_action( 'transition_post_status', array( $vpm_svb_instance, 'cache_bust_post_transitional' ), 99 );
+
+	add_action( 'comment_post', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+	add_action( 'edit_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+	add_action( 'trashed_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+	add_action( 'untrashed_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+	add_action( 'deleted_comment', array( $vpm_svb_instance, 'cache_bust_comments', 99 );
+
+	add_action( 'admin_menu', array( $vpm_svb_instance, 'add_settings_page' ) );
 	
 	register_activation_hook( __FILE__, array( $vpm_svb_instance, 'initial_setup' ) );
 
