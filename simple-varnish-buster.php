@@ -58,6 +58,13 @@ class Simple_Varnish_Buster {
 	private $varnish_host;
 
 	/**
+	 * The maximum timeout to wait for the PURGE operation to complete.
+	 * @access private
+	 * @var int
+	 */
+	private $timeout;
+
+	/**
 	 * Constructor, which checks for prerequisites
 	 */
 	public function __construct() {
@@ -70,8 +77,65 @@ class Simple_Varnish_Buster {
 		}
 	
 		// set up varnish host
+		$this->varnish_host = parse_url( get_option( 'svb_varnish_host' ), PHP_URL_HOST );
+		$port = parse_url ( get_option( 'svb_varnish_host' ), PHP_URL_PORT );
+
+		if ( $port ) {
+			$this->varnish_host .= ':' . intval( $port );
+		}
+	
+		$this->timeout = intval( get_option( 'svb_timeout' ) );
 
 		$this->prerequisites_met = true;		
+	
+	}
+
+	/**
+	 * Initial setup of the default options for Varnish host and timeout upon initial plugin activation.
+	 * @access public
+	 * @return void
+	 */
+	public function initial_setup() {
+		// set some sensible defaults
+
+		$default_varnish_host = '127.0.0.1';
+		$default_timeout = '1';
+
+		if ( ! get_option( 'svb_varnish_host' ) ) {
+			add_option( 'svb_varnish_host', $default_varnish_host, '', 'yes' );
+			$this->varnish_host = $default_varnish_host;
+		}
+
+		if ( ! get_option( 'svb_timeout' ) ) {
+			add_option( 'svb_timeout', $default_timeout, '', 'yes' );
+			$this->timeout = $default_timeout;
+		}
+		
+	}
+
+	/**
+	 * Bust the cache for the given post_id. Also expire the homepage and feed caches. Should run on edit_post.
+	 * @access public
+	 * @return void 
+	 */
+	public function cache_bust_post( $post_id ) {
+
+		$post_url = get_permalink( $post_id );
+
+		$this->bust_cache_for_url( $post_url );
+		
+		// also expire homepage
+		$this->bust_cache_for_url( get_home_url( null, '', 'http' )  );
+
+		// also expire feeds
+		$feed_urls[] = get_bloginfo( 'rss2_url' );
+		$feed_urls[] = get_bloginfo( 'atom_url' );
+		$feed_urls[] = get_bloginfo( 'rdf_url' );
+		$feed_urls[] = get_bloginfo( 'rss_url' );
+	
+		foreach( $feed_urls as $feed ) {
+			$this->bust_cache_for_url( $feed );
+		}
 	
 	}
 
@@ -83,10 +147,34 @@ class Simple_Varnish_Buster {
 	 */
 	protected function bust_cache_for_url( $url ) {
 
+		// split up URL, so we can target the actual Varnish server in the CURLOPT_URL,
+		// but then use the Host header to ensure it knows which site we are working with
+
+		// for example, we will always target '127.0.0.1' in the URL, so we use the loopback iface
+		// and therefore Varnish lets us PURGE, but we still need to tell it which Host it
+		// is working with!
+		$url_parts = parse_url( $url );
+
+		if (
+			is_array( $url_parts ) &&
+			count( $url_parts ) > 0
+			array_key_exists( 'scheme', $url_parts ) &&
+			array_key_exists( 'path', $url_parts ) &&
+			array_key_exists( 'host', $url_parts )
+		) {
+			// add the query string in with its preceding '?' character, or set it to a blank string
+			$url_parts['query'] = array_key_exists( 'query', $url_parts ) ? '?' . $url_parts['query'] : '';	
+
+			$reconstructed_url = $url_parts['scheme'] . $this->varnish_host . $url_parts['path'] . $url_parts['query'];
+		}
+		else {
+			return false;
+		}
+
 		$options = array(
-			CURLOPT_URL		=>	$url,
+			CURLOPT_URL		=>	$reconstructed_url,
 			CURLOPT_USERAGENT	=>	$this->user_agent_string,
-			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . $this->varnish_host )
+			CURLOPT_HTTPHEADER	=> 	array ('Host: ' . $url_parts['host'] )
 			CURLOPT_CUSTOMREQUEST	=>	'PURGE',
 			CURLOPT_RETURNTRANSFER	=>	true,
 			CURLOPT_TIMEOUT		=>	$this->timeout,
@@ -105,5 +193,9 @@ $vpm_svb_instance = new Simple_Varnish_Buster();
 
 if ( $vpm_svb_instance->prerequisites_met ) {
 	// hook up actions
+
+	add_action( 'edit_post', array( $vpm_svb_instance, 'cache_bust_post'), 99 );
+	
+	register_activation_hook( __FILE__, array( $vpm_svb_instance, 'initial_setup' ) );
 
 }
