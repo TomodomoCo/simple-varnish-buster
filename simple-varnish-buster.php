@@ -174,7 +174,7 @@ class Simple_Varnish_Buster {
 			// add the query string in with its preceding '?' character, or set it to a blank string
 			$url_parts['query'] = array_key_exists( 'query', $url_parts ) ? '?' . $url_parts['query'] : '';	
 
-			$reconstructed_url = $url_parts['scheme'] . '://' $this->varnish_host . $url_parts['path'] . $url_parts['query'];
+			$reconstructed_url = $url_parts['scheme'] . '://' . $this->varnish_host . $url_parts['path'] . $url_parts['query'];
 		}
 		else {
 			return false;
