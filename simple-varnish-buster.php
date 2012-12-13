@@ -149,16 +149,6 @@ class Simple_Varnish_Buster {
 	}
 
 	/**
-	 * Bust the cache for this post as it transitions between post statuses
-	 * @access public
-	 * @return void
-	 */
-	public function cache_bust_post_transitional( $old, $new, $post ) {
-		$post_id = $post->ID;
-		$this->cache_bust_post( $post_id );
-	}
-
-	/**
 	 * Bust the cache for a post when comments on it have been altered.
 	 * @access public
 	 * @return void
@@ -356,7 +346,6 @@ if ( $vpm_svb_instance->prerequisites_met ) {
 
 	add_action( 'edit_post', array( $vpm_svb_instance, 'cache_bust_post' ), 99 );
 	add_action( 'delete_post', array( $vpm_svb_instance, 'cache_bust_post' ), 99);
-	add_action( 'transition_post_status', array( $vpm_svb_instance, 'cache_bust_post_transitional' ), 99 );
 
 	add_action( 'comment_post', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
 	add_action( 'edit_comment', array( $vpm_svb_instance, 'cache_bust_comments' ), 99 );
