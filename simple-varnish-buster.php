@@ -157,7 +157,7 @@ class Simple_Varnish_Buster {
 
 		if (
 			is_array( $url_parts ) &&
-			count( $url_parts ) > 0
+			count( $url_parts ) > 0 &&
 			array_key_exists( 'scheme', $url_parts ) &&
 			array_key_exists( 'path', $url_parts ) &&
 			array_key_exists( 'host', $url_parts )
