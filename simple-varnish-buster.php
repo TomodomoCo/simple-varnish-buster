@@ -166,11 +166,11 @@ class Simple_Varnish_Buster {
 
 	/**
 	 * Send a PURGE request to the Varnish cache server for the specified $url.
-	 * @access protected
+	 * @access public
 	 * @param string $url
 	 * @return void
 	 */
-	protected function bust_cache_for_url( $url ) {
+	public function bust_cache_for_url( $url ) {
 
 		// split up URL, so we can target the actual Varnish server in the CURLOPT_URL,
 		// but then use the Host header to ensure it knows which site we are working with
